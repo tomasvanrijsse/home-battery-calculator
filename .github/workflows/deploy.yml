@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - claude/nuxt-energy-csv-viewer-WSi9K
 
 permissions:
   contents: read
