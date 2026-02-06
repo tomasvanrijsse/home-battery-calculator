@@ -121,4 +121,49 @@ describe('simulateBattery', () => {
     expect(result.exportSavedKwh).toBe(0)
     expect(result.importSavedKwh).toBe(0)
   })
+
+  it('calculates costs when tariffs are provided', () => {
+    // Charge 3 kWh from export, discharge 2 kWh for import
+    const rows = [
+      row('2025-01-01 00:00', 100, 200, 10, 20),
+      row('2025-01-01 00:15', 100, 200, 11.5, 21.5), // export 3 kWh
+      row('2025-01-01 00:30', 101, 201, 11.5, 21.5),  // import 2 kWh
+    ]
+
+    const result = simulateBattery(rows, 10, 0.25, 0.10)
+    expect(result.exportSavedKwh).toBe(3)
+    expect(result.importSavedKwh).toBe(2)
+    expect(result.importSavingsEur).toBe(0.50) // 2 * 0.25
+    expect(result.exportLossEur).toBe(0.30) // 3 * 0.10
+    expect(result.netSavingsEur).toBe(0.20) // 0.50 - 0.30
+  })
+
+  it('does not calculate costs when tariffs are zero', () => {
+    const rows = [
+      row('2025-01-01 00:00', 100, 200, 10, 20),
+      row('2025-01-01 00:15', 100, 200, 11, 21), // export 2 kWh
+    ]
+
+    const result = simulateBattery(rows, 10, 0, 0)
+    expect(result.exportSavedKwh).toBe(2)
+    expect(result.importSavingsEur).toBeUndefined()
+    expect(result.exportLossEur).toBeUndefined()
+    expect(result.netSavingsEur).toBeUndefined()
+  })
+
+  it('handles negative net savings correctly', () => {
+    // Export saved is expensive (0.30), import saved is cheap (0.10)
+    const rows = [
+      row('2025-01-01 00:00', 100, 200, 10, 20),
+      row('2025-01-01 00:15', 100, 200, 15, 25), // export 10 kWh
+      row('2025-01-01 00:30', 101, 201, 15, 25),  // import 2 kWh
+    ]
+
+    const result = simulateBattery(rows, 10, 0.10, 0.30)
+    expect(result.exportSavedKwh).toBe(10)
+    expect(result.importSavedKwh).toBe(2)
+    expect(result.importSavingsEur).toBe(0.20) // 2 * 0.10
+    expect(result.exportLossEur).toBe(3.00) // 10 * 0.30
+    expect(result.netSavingsEur).toBe(-2.80) // 0.20 - 3.00
+  })
 })

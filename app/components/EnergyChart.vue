@@ -17,29 +17,68 @@ const props = defineProps<{
   data: DailyEnergy[]
 }>()
 
-const chartData = computed(() => ({
-  labels: props.data.map((d) => d.date),
-  datasets: [
-    {
-      label: 'Verbruik (kWh)',
-      data: props.data.map((d) => d.importKwh),
-      backgroundColor: 'rgba(239, 68, 68, 0.7)',
-    },
-    {
-      label: 'Teruglevering (kWh)',
-      data: props.data.map((d) => d.exportKwh),
-      backgroundColor: 'rgba(34, 197, 94, 0.7)',
-    },
-  ],
-}))
+const hasBatteryData = computed(() =>
+  props.data.some((d) => d.importWithBatteryKwh !== undefined)
+)
 
-const chartOptions = {
+const chartData = computed(() => {
+  const datasets = []
+
+  if (hasBatteryData.value) {
+    // Show battery-adjusted data
+    datasets.push(
+      {
+        label: 'Verbruik met batterij (kWh)',
+        data: props.data.map((d) => d.importWithBatteryKwh ?? d.importKwh),
+        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+      },
+      {
+        label: 'Teruglevering met batterij (kWh)',
+        data: props.data.map((d) => d.exportWithBatteryKwh ?? d.exportKwh),
+        backgroundColor: 'rgba(34, 197, 94, 0.9)',
+      },
+      {
+        label: 'Verbruik zonder batterij (kWh)',
+        data: props.data.map((d) => d.importKwh),
+        backgroundColor: 'rgba(239, 68, 68, 0.3)',
+      },
+      {
+        label: 'Teruglevering zonder batterij (kWh)',
+        data: props.data.map((d) => d.exportKwh),
+        backgroundColor: 'rgba(34, 197, 94, 0.3)',
+      }
+    )
+  } else {
+    // Show original data only
+    datasets.push(
+      {
+        label: 'Verbruik (kWh)',
+        data: props.data.map((d) => d.importKwh),
+        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+      },
+      {
+        label: 'Teruglevering (kWh)',
+        data: props.data.map((d) => d.exportKwh),
+        backgroundColor: 'rgba(34, 197, 94, 0.7)',
+      }
+    )
+  }
+
+  return {
+    labels: props.data.map((d) => d.date),
+    datasets,
+  }
+})
+
+const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     title: {
       display: true,
-      text: 'Dagelijks energieverbruik en teruglevering',
+      text: hasBatteryData.value
+        ? 'Dagelijks energieverbruik en teruglevering (met en zonder batterij)'
+        : 'Dagelijks energieverbruik en teruglevering',
     },
     legend: {
       position: 'top' as const,
@@ -58,7 +97,7 @@ const chartOptions = {
       },
     },
   },
-}
+}))
 </script>
 
 <template>

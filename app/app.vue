@@ -1,5 +1,14 @@
 <script setup lang="ts">
-const { dailyData, isLoading, error, parseFile, batteryCapacity, batterySavings } = useEnergyData()
+const {
+  dailyData,
+  isLoading,
+  error,
+  parseFile,
+  batteryCapacity,
+  importTariff,
+  exportTariff,
+  batterySavings,
+} = useEnergyData()
 
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
@@ -29,15 +38,39 @@ function onFileChange(event: Event) {
     </div>
 
     <div v-if="dailyData.length > 0" class="battery-section">
-      <label for="battery-input">Thuisbatterij formaat (kWh):</label>
-      <input
-        id="battery-input"
-        v-model.number="batteryCapacity"
-        type="number"
-        min="0"
-        step="0.5"
-        placeholder="bijv. 10"
-      />
+      <div class="input-group">
+        <label for="battery-input">Thuisbatterij formaat (kWh):</label>
+        <input
+          id="battery-input"
+          v-model.number="batteryCapacity"
+          type="number"
+          min="0"
+          step="0.5"
+          placeholder="bijv. 10"
+        />
+      </div>
+      <div class="input-group">
+        <label for="import-tariff">Import tarief (€/kWh):</label>
+        <input
+          id="import-tariff"
+          v-model.number="importTariff"
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="bijv. 0.25"
+        />
+      </div>
+      <div class="input-group">
+        <label for="export-tariff">Export tarief (€/kWh):</label>
+        <input
+          id="export-tariff"
+          v-model.number="exportTariff"
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="bijv. 0.10"
+        />
+      </div>
     </div>
 
     <div v-if="batterySavings" class="savings">
@@ -56,6 +89,25 @@ function onFileChange(event: Event) {
           afgenomen van het net (uit batterij verbruikt)
         </li>
       </ul>
+      <div v-if="batterySavings.netSavingsEur !== undefined" class="cost-summary">
+        <h3>Kosten besparing</h3>
+        <ul>
+          <li>
+            Besparing op import:
+            <strong class="positive">€ {{ batterySavings.importSavingsEur?.toFixed(2) }}</strong>
+          </li>
+          <li>
+            Gemiste export inkomsten:
+            <strong class="negative">€ {{ batterySavings.exportLossEur?.toFixed(2) }}</strong>
+          </li>
+          <li class="net-savings">
+            <strong>Netto besparing:</strong>
+            <strong :class="batterySavings.netSavingsEur >= 0 ? 'positive' : 'negative'">
+              € {{ batterySavings.netSavingsEur?.toFixed(2) }}
+            </strong>
+          </li>
+        </ul>
+      </div>
     </div>
 
     <p v-if="isLoading" class="status">Bestand wordt verwerkt...</p>
@@ -149,15 +201,22 @@ h1 {
 .battery-section {
   margin-bottom: 1.5rem;
   display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.input-group {
+  display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
-.battery-section label {
+.input-group label {
   font-weight: 500;
+  white-space: nowrap;
 }
 
-#battery-input {
+.input-group input {
   width: 100px;
   padding: 0.4rem 0.6rem;
   border: 1px solid #ccc;
@@ -185,5 +244,36 @@ h1 {
 
 .savings li {
   margin-bottom: 0.3rem;
+}
+
+.cost-summary {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cost-summary h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.cost-summary ul {
+  margin-top: 0.5rem;
+  padding-left: 1.5rem;
+}
+
+.positive {
+  color: #059669;
+}
+
+.negative {
+  color: #dc2626;
+}
+
+.net-savings {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 1.05rem;
 }
 </style>
