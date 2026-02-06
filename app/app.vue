@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { dailyData, isLoading, error, parseFile } = useEnergyData()
+const { dailyData, isLoading, error, parseFile, batteryCapacity, batterySavings } = useEnergyData()
 
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
@@ -26,6 +26,36 @@ function onFileChange(event: Event) {
         accept=".csv"
         @change="onFileChange"
       />
+    </div>
+
+    <div v-if="dailyData.length > 0" class="battery-section">
+      <label for="battery-input">Thuisbatterij formaat (kWh):</label>
+      <input
+        id="battery-input"
+        v-model.number="batteryCapacity"
+        type="number"
+        min="0"
+        step="0.5"
+        placeholder="bijv. 10"
+      />
+    </div>
+
+    <div v-if="batterySavings" class="savings">
+      <h2>Batterijsimulatie</h2>
+      <p>
+        Met een thuisbatterij van <strong>{{ batteryCapacity }} kWh</strong> had
+        je over deze periode:
+      </p>
+      <ul>
+        <li>
+          <strong>{{ batterySavings.exportSavedKwh }} kWh</strong> minder
+          teruggeleverd (opgeslagen in batterij)
+        </li>
+        <li>
+          <strong>{{ batterySavings.importSavedKwh }} kWh</strong> minder
+          afgenomen van het net (uit batterij verbruikt)
+        </li>
+      </ul>
     </div>
 
     <p v-if="isLoading" class="status">Bestand wordt verwerkt...</p>
@@ -114,5 +144,46 @@ h1 {
 .summary {
   margin-bottom: 1rem;
   font-size: 1.05rem;
+}
+
+.battery-section {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.battery-section label {
+  font-weight: 500;
+}
+
+#battery-input {
+  width: 100px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.savings {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.savings h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.savings ul {
+  margin-top: 0.5rem;
+  padding-left: 1.5rem;
+}
+
+.savings li {
+  margin-bottom: 0.3rem;
 }
 </style>
