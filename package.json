@@ -1,0 +1,30 @@
+{
+  "name": "home-battery-calculator",
+  "version": "1.0.0",
+  "description": "Insert your energy usage export and calculate the ideal home battery size",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:65318/git/tomasvanrijsse/home-battery-calculator"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "nuxt": "^4.3.0",
+    "papaparse": "^5.5.3",
+    "vue": "^3.5.27",
+    "vue-chartjs": "^5.3.3",
+    "vue-router": "^5.0.2"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.5.2"
+  }
+}
