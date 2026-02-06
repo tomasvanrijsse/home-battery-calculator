@@ -1,6 +1,6 @@
 import Papa from 'papaparse'
 
-interface CsvRow {
+export interface CsvRow {
   time: string
   'Import T1 kWh': string
   'Import T2 kWh': string
@@ -68,7 +68,7 @@ export function useEnergyData() {
   return { dailyData, isLoading, error, parseFile, batteryCapacity, batterySavings }
 }
 
-function computeDaily(rows: CsvRow[]): DailyEnergy[] {
+export function computeDaily(rows: CsvRow[]): DailyEnergy[] {
   const byDate = new Map<string, { imports: number[]; exports: number[] }>()
 
   for (const row of rows) {
@@ -103,7 +103,7 @@ function computeDaily(rows: CsvRow[]): DailyEnergy[] {
   return result
 }
 
-function simulateBattery(rows: CsvRow[], capacityKwh: number): BatterySavings {
+export function simulateBattery(rows: CsvRow[], capacityKwh: number): BatterySavings {
   let batteryLevel = 0
   let importSaved = 0
   let exportSaved = 0
