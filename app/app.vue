@@ -8,6 +8,7 @@ const {
   importTariff,
   exportTariff,
   batterySavings,
+  dynamicTariffSavings,
 } = useEnergyData()
 
 function onFileChange(event: Event) {
@@ -108,6 +109,25 @@ function onFileChange(event: Event) {
           </li>
         </ul>
       </div>
+    </div>
+
+    <div v-if="dynamicTariffSavings" class="savings">
+      <h2>Dynamische tarieven</h2>
+      <p>
+        Met dezelfde batterij van <strong>{{ batteryCapacity }} kWh</strong>,
+        's nachts laden (00:00–04:00) en tijdens piekuren ontladen
+        (16:00–21:00):
+      </p>
+      <ul>
+        <li>
+          <strong>{{ dynamicTariffSavings.cheapChargedKwh }} kWh</strong>
+          goedkoop geladen vanuit het net
+        </li>
+        <li>
+          <strong>{{ dynamicTariffSavings.peakOffsetKwh }} kWh</strong>
+          piekverbruik vermeden (uit batterij verbruikt)
+        </li>
+      </ul>
     </div>
 
     <p v-if="isLoading" class="status">Bestand wordt verwerkt...</p>

@@ -24,6 +24,11 @@ export interface BatterySavings {
   netSavingsEur?: number
 }
 
+export interface DynamicTariffSavings {
+  cheapChargedKwh: number
+  peakOffsetKwh: number
+}
+
 export function useEnergyData() {
   const dailyData = ref<DailyEnergy[]>([])
   const rawRows = ref<CsvRow[]>([])
@@ -33,6 +38,7 @@ export function useEnergyData() {
   const importTariff = ref<number>(0)
   const exportTariff = ref<number>(0)
   const batterySavings = ref<BatterySavings | null>(null)
+  const dynamicTariffSavings = ref<DynamicTariffSavings | null>(null)
 
   function parseFile(file: File) {
     isLoading.value = true
@@ -40,6 +46,7 @@ export function useEnergyData() {
     dailyData.value = []
     rawRows.value = []
     batterySavings.value = null
+    dynamicTariffSavings.value = null
 
     Papa.parse<CsvRow>(file, {
       header: true,
@@ -55,6 +62,7 @@ export function useEnergyData() {
               importTariff.value,
               exportTariff.value
             )
+            dynamicTariffSavings.value = simulateDynamicTariff(results.data, batteryCapacity.value)
           }
         } catch (e) {
           error.value = (e as Error).message
@@ -77,9 +85,11 @@ export function useEnergyData() {
         importTariff.value,
         exportTariff.value
       )
+      dynamicTariffSavings.value = simulateDynamicTariff(rawRows.value, batteryCapacity.value)
       dailyData.value = computeDailyWithBattery(rawRows.value, batteryCapacity.value)
     } else {
       batterySavings.value = null
+      dynamicTariffSavings.value = null
       if (rawRows.value.length > 0) {
         dailyData.value = computeDaily(rawRows.value)
       }
@@ -97,6 +107,7 @@ export function useEnergyData() {
     importTariff,
     exportTariff,
     batterySavings,
+    dynamicTariffSavings,
   }
 }
 
@@ -259,4 +270,49 @@ export function computeDailyWithBattery(rows: CsvRow[], capacityKwh: number): Da
   }
 
   return daily
+}
+
+function getHour(time: string): number {
+  // time format: "2025-01-01 00:15"
+  return parseInt(time.substring(11, 13), 10)
+}
+
+export function simulateDynamicTariff(rows: CsvRow[], capacityKwh: number): DynamicTariffSavings {
+  let batteryLevel = 0
+  let cheapCharged = 0
+  let peakOffset = 0
+
+  for (let i = 1; i < rows.length; i++) {
+    const prev = rows[i - 1]
+    const curr = rows[i]
+
+    if (!prev.time || !curr.time) continue
+
+    const hour = getHour(curr.time)
+
+    const prevImport = parseFloat(prev['Import T1 kWh']) + parseFloat(prev['Import T2 kWh'])
+    const currImport = parseFloat(curr['Import T1 kWh']) + parseFloat(curr['Import T2 kWh'])
+
+    if (isNaN(prevImport) || isNaN(currImport)) continue
+
+    const intervalImport = currImport - prevImport
+
+    if (hour >= 0 && hour < 4) {
+      // Cheap hours: charge battery from grid
+      const space = capacityKwh - batteryLevel
+      const charge = Math.min(space, capacityKwh / 16) // spread across 16 intervals (4h)
+      batteryLevel += charge
+      cheapCharged += charge
+    } else if (hour >= 16 && hour < 21) {
+      // Peak hours: discharge battery to offset import
+      const discharge = Math.min(batteryLevel, intervalImport)
+      batteryLevel -= discharge
+      peakOffset += discharge
+    }
+  }
+
+  return {
+    cheapChargedKwh: Math.round(cheapCharged * 100) / 100,
+    peakOffsetKwh: Math.round(peakOffset * 100) / 100,
+  }
 }
