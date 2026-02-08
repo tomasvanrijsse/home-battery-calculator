@@ -83,9 +83,9 @@ export function useEnergyData() {
   const rawRows = ref<CsvRow[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-  const batteryCapacity = ref<number>(0)
-  const importTariff = ref<number>(0)
-  const exportTariff = ref<number>(0)
+  const batteryCapacity = ref<number>(5)
+  const importTariff = ref<number>(0.25)
+  const exportTariff = ref<number>(0.15)
   const batterySavings = ref<BatterySavings | null>(null)
   const dynamicTariffSavings = ref<DynamicTariffSavings | null>(null)
 

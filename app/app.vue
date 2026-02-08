@@ -11,6 +11,8 @@ const {
   dynamicTariffSavings,
 } = useEnergyData()
 
+const hasData = computed(() => dailyData.value.length > 0)
+
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -38,7 +40,10 @@ function onFileChange(event: Event) {
       />
     </div>
 
-    <div v-if="dailyData.length > 0" class="battery-section">
+    <p v-if="isLoading" class="status">Bestand wordt verwerkt...</p>
+    <p v-if="error" class="error">Fout: {{ error }}</p>
+
+    <div class="battery-section">
       <div class="input-group">
         <label for="battery-input">Thuisbatterij formaat (kWh):</label>
         <input
@@ -47,7 +52,6 @@ function onFileChange(event: Event) {
           type="number"
           min="0"
           step="0.5"
-          placeholder="bijv. 10"
         />
       </div>
       <div class="input-group">
@@ -58,7 +62,6 @@ function onFileChange(event: Event) {
           type="number"
           min="0"
           step="0.01"
-          placeholder="bijv. 0.25"
         />
       </div>
       <div class="input-group">
@@ -69,16 +72,12 @@ function onFileChange(event: Event) {
           type="number"
           min="0"
           step="0.01"
-          placeholder="bijv. 0.10"
         />
       </div>
     </div>
 
-    <p v-if="isLoading" class="status">Bestand wordt verwerkt...</p>
-    <p v-if="error" class="error">Fout: {{ error }}</p>
-
-    <div v-if="dailyData.length > 0" class="results">
-      <p class="summary">
+    <div class="results">
+      <p v-if="hasData" class="summary">
         {{ dailyData.length }} dagen geladen &mdash; totaal verbruik:
         <strong>
           {{ dailyData.reduce((s, d) => s + d.importKwh, 0).toFixed(1) }} kWh </strong
@@ -88,63 +87,76 @@ function onFileChange(event: Event) {
         </strong>
       </p>
       <EnergyChart :data="dailyData" />
+      <p v-if="!hasData" class="placeholder">
+        Upload een CSV-bestand om de grafiek te vullen.
+      </p>
     </div>
 
-    <div v-if="batterySavings || dynamicTariffSavings" class="savings-grid">
-      <div v-if="batterySavings" class="savings">
+    <div class="savings-grid">
+      <div class="savings">
         <h2>Batterijsimulatie</h2>
-        <p>
-          Met een thuisbatterij van <strong>{{ batteryCapacity }} kWh</strong> had
-          je over deze periode:
-        </p>
-        <ul>
-          <li>
-            <strong>{{ batterySavings.exportSavedKwh }} kWh</strong> minder
-            teruggeleverd (opgeslagen in batterij)
-          </li>
-          <li>
-            <strong>{{ batterySavings.importSavedKwh }} kWh</strong> minder
-            afgenomen van het net (uit batterij verbruikt)
-          </li>
-        </ul>
-        <div v-if="batterySavings.netSavingsEur !== undefined" class="cost-summary">
-          <h3>Kosten besparing</h3>
+        <template v-if="batterySavings">
+          <p>
+            Met een thuisbatterij van <strong>{{ batteryCapacity }} kWh</strong> had
+            je over deze periode:
+          </p>
           <ul>
             <li>
-              Besparing op import:
-              <strong class="positive">€ {{ batterySavings.importSavingsEur?.toFixed(2) }}</strong>
+              <strong>{{ batterySavings.exportSavedKwh }} kWh</strong> minder
+              teruggeleverd (opgeslagen in batterij)
             </li>
             <li>
-              Gemiste export inkomsten:
-              <strong class="negative">€ {{ batterySavings.exportLossEur?.toFixed(2) }}</strong>
-            </li>
-            <li class="net-savings">
-              <strong>Netto besparing:</strong>
-              <strong :class="batterySavings.netSavingsEur >= 0 ? 'positive' : 'negative'">
-                € {{ batterySavings.netSavingsEur?.toFixed(2) }}
-              </strong>
+              <strong>{{ batterySavings.importSavedKwh }} kWh</strong> minder
+              afgenomen van het net (uit batterij verbruikt)
             </li>
           </ul>
-        </div>
+          <div v-if="batterySavings.netSavingsEur !== undefined" class="cost-summary">
+            <h3>Kosten besparing</h3>
+            <ul>
+              <li>
+                Besparing op import:
+                <strong class="positive">€ {{ batterySavings.importSavingsEur?.toFixed(2) }}</strong>
+              </li>
+              <li>
+                Gemiste export inkomsten:
+                <strong class="negative">€ {{ batterySavings.exportLossEur?.toFixed(2) }}</strong>
+              </li>
+              <li class="net-savings">
+                <strong>Netto besparing:</strong>
+                <strong :class="batterySavings.netSavingsEur >= 0 ? 'positive' : 'negative'">
+                  € {{ batterySavings.netSavingsEur?.toFixed(2) }}
+                </strong>
+              </li>
+            </ul>
+          </div>
+        </template>
+        <p v-else class="placeholder">
+          Upload een CSV-bestand om de batterijsimulatie te berekenen.
+        </p>
       </div>
 
-      <div v-if="dynamicTariffSavings" class="savings">
+      <div class="savings">
         <h2>Dynamische tarieven</h2>
-        <p>
-          Met dezelfde batterij van <strong>{{ batteryCapacity }} kWh</strong>,
-          's nachts laden (00:00–04:00) en tijdens piekuren ontladen
-          (16:00–21:00):
+        <template v-if="dynamicTariffSavings">
+          <p>
+            Met dezelfde batterij van <strong>{{ batteryCapacity }} kWh</strong>,
+            's nachts laden (00:00–04:00) en tijdens piekuren ontladen
+            (16:00–21:00):
+          </p>
+          <ul>
+            <li>
+              <strong>{{ dynamicTariffSavings.cheapChargedKwh }} kWh</strong>
+              goedkoop geladen vanuit het net
+            </li>
+            <li>
+              <strong>{{ dynamicTariffSavings.peakOffsetKwh }} kWh</strong>
+              piekverbruik vermeden (uit batterij verbruikt)
+            </li>
+          </ul>
+        </template>
+        <p v-else class="placeholder">
+          Upload een CSV-bestand om de dynamische tarieven simulatie te berekenen.
         </p>
-        <ul>
-          <li>
-            <strong>{{ dynamicTariffSavings.cheapChargedKwh }} kWh</strong>
-            goedkoop geladen vanuit het net
-          </li>
-          <li>
-            <strong>{{ dynamicTariffSavings.peakOffsetKwh }} kWh</strong>
-            piekverbruik vermeden (uit batterij verbruikt)
-          </li>
-        </ul>
       </div>
     </div>
   </div>
@@ -212,12 +224,17 @@ h1 {
 }
 
 .results {
-  margin-top: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .summary {
   margin-bottom: 1rem;
   font-size: 1.05rem;
+}
+
+.placeholder {
+  color: #999;
+  font-style: italic;
 }
 
 .battery-section {
