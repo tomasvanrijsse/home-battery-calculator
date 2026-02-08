@@ -8,6 +8,55 @@ export interface CsvRow {
   'Export T2 kWh': string
 }
 
+interface ColumnMapping {
+  time: string
+  importT1: string
+  importT2: string
+  exportT1: string
+  exportT2: string
+}
+
+const COLUMN_ALIASES: Record<keyof ColumnMapping, string[]> = {
+  time: ['time', 'timestamp', 'datum', 'date', 'tijd'],
+  importT1: ['import t1 kwh', 'import t1', 'afname t1 kwh', 'afname t1'],
+  importT2: ['import t2 kwh', 'import t2', 'afname t2 kwh', 'afname t2'],
+  exportT1: ['export t1 kwh', 'export t1', 'teruglevering t1 kwh', 'teruglevering t1'],
+  exportT2: ['export t2 kwh', 'export t2', 'teruglevering t2 kwh', 'teruglevering t2'],
+}
+
+export function detectColumns(headers: string[]): ColumnMapping {
+  const lower = headers.map((h) => h.toLowerCase().trim())
+
+  function find(field: keyof ColumnMapping): string {
+    const aliases = COLUMN_ALIASES[field]
+    for (const alias of aliases) {
+      const idx = lower.indexOf(alias)
+      if (idx !== -1) return headers[idx]
+    }
+    throw new Error(
+      `Kolom "${aliases[0]}" niet gevonden in CSV. Gevonden kolommen: ${headers.join(', ')}`
+    )
+  }
+
+  return {
+    time: find('time'),
+    importT1: find('importT1'),
+    importT2: find('importT2'),
+    exportT1: find('exportT1'),
+    exportT2: find('exportT2'),
+  }
+}
+
+export function mapRows(rawRows: Record<string, string>[], mapping: ColumnMapping): CsvRow[] {
+  return rawRows.map((raw) => ({
+    time: raw[mapping.time] ?? '',
+    'Import T1 kWh': raw[mapping.importT1] ?? '',
+    'Import T2 kWh': raw[mapping.importT2] ?? '',
+    'Export T1 kWh': raw[mapping.exportT1] ?? '',
+    'Export T2 kWh': raw[mapping.exportT2] ?? '',
+  }))
+}
+
 export interface DailyEnergy {
   date: string
   importKwh: number
@@ -48,21 +97,24 @@ export function useEnergyData() {
     batterySavings.value = null
     dynamicTariffSavings.value = null
 
-    Papa.parse<CsvRow>(file, {
+    Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete(results) {
         try {
-          rawRows.value = results.data
-          dailyData.value = computeDaily(results.data)
+          const headers = results.meta.fields ?? []
+          const mapping = detectColumns(headers)
+          const mapped = mapRows(results.data as Record<string, string>[], mapping)
+          rawRows.value = mapped
+          dailyData.value = computeDaily(mapped)
           if (batteryCapacity.value > 0) {
             batterySavings.value = simulateBattery(
-              results.data,
+              mapped,
               batteryCapacity.value,
               importTariff.value,
               exportTariff.value
             )
-            dynamicTariffSavings.value = simulateDynamicTariff(results.data, batteryCapacity.value)
+            dynamicTariffSavings.value = simulateDynamicTariff(mapped, batteryCapacity.value)
           }
         } catch (e) {
           error.value = (e as Error).message
